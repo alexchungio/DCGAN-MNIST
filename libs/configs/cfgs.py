@@ -84,7 +84,8 @@ BATCH_SIZE = 128
 # NUM_UNITS = [128, 64, 32]
 #-------------------------train config-------------------------------
 EMBEDDING_TRANSFER = False
-LEARNING_RATE = 1e-4
+GENERATOR_LEARNING_RATE = 2e-4
+DISCRIMINATOR_LEARNING_RATE = 1e-4
 NUM_EPOCH = 40
 DROPOUT_RATE = 0.5
 
