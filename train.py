@@ -11,83 +11,184 @@
 #-------------------------------------------------------
 
 import os
-import numpy as np
 import tensorflow as tf
-import glob
-import imageio
-import matplotlib.pyplot as plt
-import PIL
-from tensorflow.keras import layers
 import time
 
-from IPython import display
+
+from libs.configs import cfgs
+from utils.tools import makedir
+from libs.nets.model import Generator, Discriminator
+from data.dataset_pipeline import noise_dataset, mnist_generator, show_save_image_grid, generate_gif
 
 
-Z_DIM = 100
-BATCH_SIZE = 128
-BUFFER_SIZE = 6000
+# sample_noise = next(iter(noise_batch))
+# sample_mnist = next(iter(mnist_batch))
+#
+generator = Generator()
+discriminator = Discriminator()
+#
+# generated_image = generator(sample_noise)
+# # show_image_grid(generated_image, batch_size=cfgs.BATCH_SIZE)
+# # plt.imshow(generated_image[0, :, :, 0], cmap='gray')
+# show_image_grid(generated_image)
+#
+# decision = discriminator(generated_image)
+# print(decision)
+
+
+# ---------------------- loss function-----------------------------
+
+# Define loss functions and optimizers for both models.
+cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
+
+
+# discriminator loss
+def discriminator_loss(real_output, fake_output):
+    """
+
+    :param real_output: (batch_size, 1)
+    :param fake_output: (batch_size, 1)
+    :return:
+    """
+    real_loss = cross_entropy(y_true=tf.ones_like(real_output, dtype=tf.float32),
+                              y_pred=real_output)
+
+    fake_loss = cross_entropy(y_true=tf.zeros_like(fake_output, dtype=tf.float32),
+                              y_pred=fake_output)
+    loss = real_loss + fake_loss
+
+    return loss
+
+
+# generator loss
+def generator_loss(fake_output):
+    """
+    The generator's loss quantifies how well it was able to trick the discriminator
+    :param fake_output: (batch_size, 1)
+    :return:
+    """
+    non_fake_loss = cross_entropy(y_true=tf.ones_like(fake_output, dtype=tf.float32),
+                                  y_pred=fake_output)
+
+    return non_fake_loss
+
+
+# ----------------------------------optimizer--------------------------------
+generator_optimizer = tf.keras.optimizers.Adam(learning_rate=cfgs.LEARNING_RATE)
+discriminator_optimizer = tf.keras.optimizers.Adam(learning_rate=cfgs.LEARNING_RATE)
+
+# ----------------------------------trian log---------------------------------------
+# checkpoint
+ckpt = tf.train.Checkpoint(generator=generator,
+                           discriminator=discriminator,
+                           generator_optimizer=generator_optimizer,
+                           discriminator_optimizer=discriminator_optimizer)
+ckpt_manager = tf.train.CheckpointManager(ckpt, directory=cfgs.TRAINED_CKPT, max_to_keep=5)
+
+# --------------------------train start with latest checkpoint----------------------------
+start_epoch = 0
+if ckpt_manager.latest_checkpoint:
+    start_epoch = int(ckpt_manager.latest_checkpoint.split('-')[-1])
+    ckpt.restore(ckpt_manager.latest_checkpoint)
+
+summary_writer = tf.summary.create_file_writer(cfgs.SUMMARY_PATH)
+# -------------------------------train step---------------------------------------
+@tf.function
+def train_step(real_image, noise):
+    """
+
+    :param real_image:
+    :param fake_image:
+    :return:
+    """
+    with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
+        generated_image = generator(noise, training=True)
+
+        real_output = discriminator(real_image, training=True)
+        fake_output = discriminator(generated_image, training=True)
+
+        gen_loss = generator_loss(fake_output=fake_output)
+        disc_loss = discriminator_loss(real_output=real_output, fake_output=fake_output)
+
+        gen_gradient = gen_tape.gradient(gen_loss, generator.trainable_variables)
+        disc_gradient = disc_tape.gradient(disc_loss, discriminator.trainable_variables)
+
+        generator_optimizer.apply_gradients(zip(gen_gradient, generator.trainable_variables))
+        discriminator_optimizer.apply_gradients(zip(disc_gradient, discriminator.trainable_variables))
+
+    return gen_loss, disc_loss
+
+
+# --------------------------------- train-------------------------------
+tf.random.set_seed(0)
+noise_seed = tf.random.normal(mean=0.0, stddev=1.0, shape=[cfgs.BATCH_SIZE, cfgs.Z_DIM], dtype=tf.float32)
+
+
+def train(dataset, noise, epochs):
+    """
+
+    :param dataset:
+    :param epochs:
+    :return:
+    """
+    global_step = 0
+    for epoch in range(epochs):
+        start_time = time.time()
+        epoch_steps = 0
+        gen_losses = 0
+        disc_losses = 0
+        for (batch, (image_batch, _)) in enumerate(dataset):
+            noise_batch = next(iter(noise))
+            gen_loss, disc_loss = train_step(image_batch, noise_batch)
+
+            gen_losses += gen_loss
+            disc_losses += disc_loss
+            epoch_steps += 1
+            global_step += 1
+
+
+            if batch % cfgs.SHOW_TRAIN_INFO_INTE == 0:
+                print('Epoch {} Batch {} Generator Loss {:.4f} Discriminator Loss {:.4f}'.format(
+                    epoch + 1, batch, gen_loss / cfgs.BATCH_SIZE, disc_loss / cfgs.BATCH_SIZE))
+
+            if global_step % cfgs.SMRY_ITER == 0:
+                with summary_writer.as_default():
+                    tf.summary.scalar('generator_loss', (gen_losses / epoch_steps), step=global_step)
+                    tf.summary.scalar('discriminator_loss', (disc_losses / epoch_steps), step=global_step)
+
+        if epoch % 5 == 0:
+            ckpt_manager.save()
 
 
 
+        print('Epoch {} Generator Loss {:.4f} Discriminator Loss {:.4f}'.format(epoch + 1,
+                                                                                gen_losses / epoch_steps,
+                                                                                disc_losses / epoch_steps))
+        print('Time taken for 1 epoch {} sec\n'.format(time.time() - start_time))
+
+        generated_image = generator(noise_seed, training=False)
+
+        show_save_image_grid(generated_image, save_dir=cfgs.IMAGE_SAVE_PATH, batch_size=cfgs.BATCH_SIZE, id=epoch)
 
 
-
-if __name__ == "__main__":
+def main():
     # load mnist
     (train_images, train_labels), (_, _) = tf.keras.datasets.mnist.load_data()
 
+    noise_batch = noise_dataset(cfgs.BATCH_SIZE, cfgs.Z_DIM)
+    mnist_batch = mnist_generator(train_images, train_labels, batch_size=cfgs.BATCH_SIZE)
 
-    print(train_images.shape, train_labels.shape)
+    train(mnist_batch, noise_batch, cfgs.NUM_EPOCH)
 
-
-    def noise_generator(dim):
-        while True:
-            yield np.random.normal(0.0, 1.0, (dim)).astype('float32')
-
-
-    def noise_dataset(batch_size):
-
-        dataset = tf.data.Dataset.from_generator(generator=noise_generator,
-                                                 output_types=(tf.float32),
-                                                 args=(batch_size,))
-
-        dataset = dataset.batch(batch_size)
-
-        return dataset
-
-    noise_batch = noise_dataset(BATCH_SIZE)
+    generate_gif(image_path=cfgs.IMAGE_SAVE_PATH,
+                 anim_file=os.path.join(cfgs.IMAGE_SAVE_PATH, 'dcgan_mnist.gif'))
 
 
-    def image_process(image, label):
-        # reshape (768,) => (28, ,28, 1)
-        # image = tf.cast(image, dtype=tf.float32)
-        image = image.reshape((28, 28, 1)).astype('float32')
-        # scale (0, 255) = (-1, 1)
-        image = (image - 127.5) / 127.5
-
-        label = label.astype('int32')
-
-        return image, label
+if __name__ == "__main__":
+    main()
 
 
-    def mnist_generator(images, labels, batch_size, buffer_size=60000):
 
-        dataset = tf.data.Dataset.from_tensor_slices((images, labels))
-        dataset = dataset.map(lambda item1, item2: tf.numpy_function(image_process,
-                                                                 inp=[item1, item2],
-                                                                 Tout=[tf.float32, tf.int32]),
-                              num_parallel_calls=tf.data.experimental.AUTOTUNE)
-
-        dataset = dataset.shuffle(buffer_size=buffer_size).batch(batch_size)
-
-        return dataset
-
-    mnist_batch = mnist_generator(train_images, train_labels, batch_size=BATCH_SIZE)
-
-    sample_mnist = next(iter(mnist_batch))
-
-    print(np.min(sample_mnist[0].numpy()), np.max(sample_mnist[0].numpy()), sample_mnist[0].shape)
-    print(np.min(sample_mnist[1].numpy()), np.max(sample_mnist[1].numpy()), sample_mnist[1].shape)
 
 
 
