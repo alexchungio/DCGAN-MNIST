@@ -75,7 +75,7 @@ def show_save_image_grid(images, save_dir=None, batch_size=128, id=None):
         ax.set_xticklabels([])
         ax.set_yticklabels([])
         ax.set_aspect('equal')
-        plt.imshow(image, cmap='Greys_r')
+        plt.imshow(image * 127.5 + 127.5, cmap='Greys_r')
 
     makedir(save_dir)
     plt.savefig(os.path.join(save_dir, 'epoch_{:04d}.png'.format(id)))

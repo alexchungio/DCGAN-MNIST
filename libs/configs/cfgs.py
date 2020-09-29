@@ -54,7 +54,7 @@ ROOT_PATH = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fi
 print (20*"++--")
 print (ROOT_PATH)
 GPU_GROUP = "4"
-SHOW_TRAIN_INFO_INTE = 10
+SHOW_TRAIN_INFO_INTE = 100
 SMRY_ITER = 100
 SAVE_WEIGHTS_ITER = 5
 
@@ -84,7 +84,7 @@ BATCH_SIZE = 128
 # NUM_UNITS = [128, 64, 32]
 #-------------------------train config-------------------------------
 EMBEDDING_TRANSFER = False
-GENERATOR_LEARNING_RATE = 2e-4
+GENERATOR_LEARNING_RATE = 1e-4
 DISCRIMINATOR_LEARNING_RATE = 1e-4
 NUM_EPOCH = 40
 DROPOUT_RATE = 0.5

@@ -74,8 +74,8 @@ def generator_loss(fake_output):
 
 
 # ----------------------------------optimizer--------------------------------
-generator_optimizer = tf.keras.optimizers.Adam(learning_rate=cfgs.LEARNING_RATE)
-discriminator_optimizer = tf.keras.optimizers.Adam(learning_rate=cfgs.LEARNING_RATE)
+generator_optimizer = tf.keras.optimizers.Adam(learning_rate=cfgs.GENERATOR_LEARNING_RATE)
+discriminator_optimizer = tf.keras.optimizers.Adam(learning_rate=cfgs.DISCRIMINATOR_LEARNING_RATE)
 
 # ----------------------------------trian log---------------------------------------
 # checkpoint
