@@ -19,6 +19,23 @@ Displayed generator Loss on Tensorboard | Displayed discriminator Loss on Tensor
 |:-------------------------:|
 every epoch generator result of training | 
 
+### dropout=0.2
+```shell script
+dropout_rate = 0.2
+generator_learning_rate = 1e-4
+discriminator_learning_rate = 4e-4
+epoch = 50
+```
+
+![acc](docs/generator_loss_dropout_02.png) | ![acc](docs/discriminator_loss_dropoout_02.png) |
+|:-------------------------:|:-------------------------:|
+Displayed generator Loss on Tensorboard | Displayed discriminator Loss on Tensorboard | 
+
+![acc](docs/dcgan_mnist_dropout_02.gif) |
+|:-------------------------:|
+every epoch generator result of training | 
+
+
 ### dropout=0.5
 ```shell script
 dropout_rate = 0.5

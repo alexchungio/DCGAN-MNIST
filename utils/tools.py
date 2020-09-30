@@ -13,6 +13,8 @@
 import math
 import sys
 import os
+import glob
+import imageio
 
 
 def view_bar(message, num, total):
@@ -38,3 +40,20 @@ def makedir(path):
             pass
     except Exception as e:
         print(e)
+
+
+def generate_gif(image_path, anim_file):
+    """
+
+    :param image_path:
+    :param anim_file:
+    :return:
+    """
+    with imageio.get_writer(anim_file, mode='I') as writer:
+        filenames = glob.glob(os.path.join(image_path, '*.png'))
+        filenames = sorted(filenames)
+        for filename in filenames:
+            image = imageio.imread(filename)
+            writer.append_data(image)
+        image = imageio.imread(filename)
+        writer.append_data(image)
