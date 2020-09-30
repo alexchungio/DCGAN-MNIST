@@ -57,7 +57,7 @@ def discriminator_loss(real_output, fake_output):
                               y_pred=fake_output)
     loss = real_loss + fake_loss
 
-    return loss
+    return loss, real_loss, fake_loss
 
 
 # generator loss
@@ -108,7 +108,7 @@ def train_step(real_image, noise):
         fake_output = discriminator(generated_image, training=True)
 
         gen_loss = generator_loss(fake_output=fake_output)
-        disc_loss = discriminator_loss(real_output=real_output, fake_output=fake_output)
+        disc_loss, real_loss, fake_loss = discriminator_loss(real_output=real_output, fake_output=fake_output)
 
         gen_gradient = gen_tape.gradient(gen_loss, generator.trainable_variables)
         disc_gradient = disc_tape.gradient(disc_loss, discriminator.trainable_variables)
@@ -116,7 +116,7 @@ def train_step(real_image, noise):
         generator_optimizer.apply_gradients(zip(gen_gradient, generator.trainable_variables))
         discriminator_optimizer.apply_gradients(zip(disc_gradient, discriminator.trainable_variables))
 
-    return gen_loss, disc_loss
+    return gen_loss, real_loss, fake_loss
 
 
 # --------------------------------- train-------------------------------
@@ -135,35 +135,40 @@ def train(dataset, noise, epochs):
     for epoch in range(epochs):
         start_time = time.time()
         epoch_steps = 0
-        gen_losses = 0
-        disc_losses = 0
+        gen_losses = 0.
+        real_losses = 0.
+        fake_losses = 0.
         for (batch, (image_batch, _)) in enumerate(dataset):
             noise_batch = next(iter(noise))
-            gen_loss, disc_loss = train_step(image_batch, noise_batch)
+            gen_loss, real_loss, fake_loss = train_step(image_batch, noise_batch)
 
             gen_losses += gen_loss
-            disc_losses += disc_loss
+            real_losses += real_loss
+            fake_losses += fake_loss
+
             epoch_steps += 1
             global_step += 1
 
-
-            if batch % cfgs.SHOW_TRAIN_INFO_INTE == 0:
-                print('Epoch {} Batch {} Generator Loss {:.4f} Discriminator Loss {:.4f}'.format(
-                    epoch + 1, batch, gen_loss / cfgs.BATCH_SIZE, disc_loss / cfgs.BATCH_SIZE))
+            if (batch + 1) % cfgs.SHOW_TRAIN_INFO_INTE == 0:
+                print('Epoch {} Batch {} Generator Loss {:.4f} Discriminator real Loss {:.4f} fake_loss  {:.4f}'.format(
+                    epoch + 1, batch, gen_loss / batch, real_losses / batch,
+                    fake_losses / batch))
 
             if global_step % cfgs.SMRY_ITER == 0:
                 with summary_writer.as_default():
                     tf.summary.scalar('generator_loss', (gen_losses / epoch_steps), step=global_step)
-                    tf.summary.scalar('discriminator_loss', (disc_losses / epoch_steps), step=global_step)
+                    tf.summary.scalar('discriminator_real_loss', (real_losses / epoch_steps), step=global_step)
+                    tf.summary.scalar('discriminator_fake_loss', (real_losses / epoch_steps), step=global_step)
 
         if epoch % 5 == 0:
             ckpt_manager.save()
 
 
 
-        print('Epoch {} Generator Loss {:.4f} Discriminator Loss {:.4f}'.format(epoch + 1,
+        print('Epoch {} Generator Loss {:.4f} Discriminator real Loss {:.4f}  fake_loss {:.4f}'.format(epoch + 1,
                                                                                 gen_losses / epoch_steps,
-                                                                                disc_losses / epoch_steps))
+                                                                                real_losses / epoch_steps,
+                                                                                fake_losses / epoch_steps))
         print('Time taken for 1 epoch {} sec\n'.format(time.time() - start_time))
 
         generated_image = generator(noise_seed, training=False)
