@@ -12,12 +12,9 @@
 import os
 import numpy as np
 import tensorflow as tf
-import glob
-import imageio
 import matplotlib.pyplot as plt
 import PIL
 
-from libs.configs import cfgs
 from utils.tools import makedir
 
 
@@ -81,22 +78,6 @@ def show_save_image_grid(images, save_dir=None, batch_size=128, id=None):
     plt.savefig(os.path.join(save_dir, 'epoch_{:04d}.png'.format(id)))
     plt.show()
 
-
-def generate_gif(image_path, anim_file):
-    """
-
-    :param image_path:
-    :param anim_file:
-    :return:
-    """
-    with imageio.get_writer(anim_file, mode='I') as writer:
-        filenames = glob.glob(os.path.join(image_path, '*.png'))
-        filenames = sorted(filenames)
-        for filename in filenames:
-            image = imageio.imread(filename)
-            writer.append_data(image)
-        image = imageio.imread(filename)
-        writer.append_data(image)
 
 
 if __name__ == "__main__":

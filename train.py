@@ -165,7 +165,7 @@ def train(dataset, noise, epochs):
 
 
 
-        print('Epoch {} Generator Loss {:.4f} Discriminator real Loss {:.4f}  fake_loss {:.4f}'.format(epoch + 1,
+        print('Epoch {} Generator Loss {:.4f} | Discriminator real Loss {:.4f} | fake_loss {:.4f}'.format(epoch + 1,
                                                                                 gen_losses / epoch_steps,
                                                                                 real_losses / epoch_steps,
                                                                                 fake_losses / epoch_steps))
