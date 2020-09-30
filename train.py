@@ -16,16 +16,16 @@ import time
 
 
 from libs.configs import cfgs
-from utils.tools import makedir
+from utils.tools import generate_gif
 from libs.nets.model import Generator, Discriminator
-from data.dataset_pipeline import noise_dataset, mnist_generator, show_save_image_grid, generate_gif
+from data.dataset_pipeline import noise_dataset, mnist_generator, show_save_image_grid
 
 
 # sample_noise = next(iter(noise_batch))
 # sample_mnist = next(iter(mnist_batch))
 #
 generator = Generator()
-discriminator = Discriminator()
+discriminator = Discriminator(dropout_rate=cfgs.DROPOUT_RATE)
 #
 # generated_image = generator(sample_noise)
 # # show_image_grid(generated_image, batch_size=cfgs.BATCH_SIZE)
@@ -181,7 +181,7 @@ def main():
     train(mnist_batch, noise_batch, cfgs.NUM_EPOCH)
 
     generate_gif(image_path=cfgs.IMAGE_SAVE_PATH,
-                 anim_file=os.path.join(cfgs.IMAGE_SAVE_PATH, 'dcgan_mnist.gif'))
+                 anim_file=os.path.join(cfgs.IMAGE_SAVE_PATH, 'dcgan_mnist_dropout_05.gif'))
 
 
 if __name__ == "__main__":

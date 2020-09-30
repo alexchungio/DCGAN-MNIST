@@ -85,8 +85,8 @@ BATCH_SIZE = 128
 #-------------------------train config-------------------------------
 EMBEDDING_TRANSFER = False
 GENERATOR_LEARNING_RATE = 1e-4
-DISCRIMINATOR_LEARNING_RATE = 1e-4
-NUM_EPOCH = 40
+DISCRIMINATOR_LEARNING_RATE = 4e-4
+NUM_EPOCH = 50
 DROPOUT_RATE = 0.5
 
 # data
