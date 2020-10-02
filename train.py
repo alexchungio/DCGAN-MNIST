@@ -136,39 +136,32 @@ def train(dataset, noise, epochs):
         start_time = time.time()
         epoch_steps = 0
         gen_losses = 0.
-        real_losses = 0.
-        fake_losses = 0.
+        disc_losses = 0.
         for (batch, (image_batch, _)) in enumerate(dataset):
             noise_batch = next(iter(noise))
-            gen_loss, real_loss, fake_loss = train_step(image_batch, noise_batch)
+            gen_loss, disc_loss = train_step(image_batch, noise_batch)
 
             gen_losses += gen_loss
-            real_losses += real_loss
-            fake_losses += fake_loss
+            disc_losses += disc_loss
 
             epoch_steps += 1
             global_step += 1
 
             if (batch + 1) % cfgs.SHOW_TRAIN_INFO_INTE == 0:
-                print('Epoch {} Batch {} Generator Loss {:.4f} Discriminator real Loss {:.4f} fake_loss  {:.4f}'.format(
-                    epoch + 1, batch, gen_loss / batch, real_losses / batch,
-                    fake_losses / batch))
+                print('Epoch {} Batch {} Generator Loss {:.4f} Discriminator Loss {:.4f}'.format(
+                    epoch + 1, batch, gen_loss / batch, disc_losses/ batch))
 
             if global_step % cfgs.SMRY_ITER == 0:
                 with summary_writer.as_default():
                     tf.summary.scalar('generator_loss', (gen_losses / epoch_steps), step=global_step)
-                    tf.summary.scalar('discriminator_real_loss', (real_losses / epoch_steps), step=global_step)
-                    tf.summary.scalar('discriminator_fake_loss', (real_losses / epoch_steps), step=global_step)
+                    tf.summary.scalar('discriminator_loss', (disc_losses / epoch_steps), step=global_step)
 
         if epoch % 5 == 0:
             ckpt_manager.save()
 
-
-
-        print('Epoch {} Generator Loss {:.4f} | Discriminator real Loss {:.4f} | fake_loss {:.4f}'.format(epoch + 1,
+        print('Epoch {} Generator Loss {:.4f} | Discriminator Loss {:.4f}'.format(epoch + 1,
                                                                                 gen_losses / epoch_steps,
-                                                                                real_losses / epoch_steps,
-                                                                                fake_losses / epoch_steps))
+                                                                                disc_losses / epoch_steps))
         print('Time taken for 1 epoch {} sec\n'.format(time.time() - start_time))
 
         generated_image = generator(noise_seed, training=False)
