@@ -12,7 +12,6 @@
 import tensorflow as tf
 
 
-
 class Generator(tf.keras.Model):
     def __init__(self):
         super(Generator, self).__init__()
@@ -40,7 +39,7 @@ class Generator(tf.keras.Model):
         self.conv_trans3 = tf.keras.layers.Conv2DTranspose(filters=1, kernel_size=(5, 5), strides=(2, 2),
                                                            padding='same', use_bias=False, activation='tanh')
 
-    def call(self, noise):
+    def call(self, noise, training=False):
         """
         :param random_noise: (batch_size, z_dim)
         :return:
@@ -98,7 +97,7 @@ class Discriminator(tf.keras.Model):
         # (-1, 1024) => (-1, 1)
         self.fc1 = tf.keras.layers.Dense(units=1)
 
-    def call(self, image):
+    def call(self, image, training=False):
         """
 
         :param image: (-1, 28, 28, 1)
@@ -107,13 +106,13 @@ class Discriminator(tf.keras.Model):
         # conv block 1 (-1, 28, 28, 1) => (-1, 14, 14, 64)
         model = self.conv1(image)
         model = self.leak_relu1(model)
-        model = self.dropout1(model)
+        model = self.dropout1(model, training=training)
 
         # conv block 2 (-1, 14, 14, 1) => (-1, 7, 7, 128)
         model = self.conv2(model)
         model = self.bn1(model)
         model = self.leak_relu2(model)
-        model = self.dropout2(model)
+        model = self.dropout2(model, training=training)
 
         # flatten
         model = self.flatten(model)
